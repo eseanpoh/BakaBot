@@ -77,6 +77,7 @@ client = commands.Bot(command_prefix = '!baka', intents = intents)
 @client.event
 async def on_ready():
 	# im sorry carissa
+	# :)
 	print('I-it\'s not like I l-like you or anything... B-{0.user}!'.format(client))
 
 # When bot reads a message
