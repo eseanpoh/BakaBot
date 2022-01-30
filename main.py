@@ -96,10 +96,13 @@ async def on_message(message):
 
 		# If command has 1 or more arguments
 		else:
+			
 			if command[1] == 'coinflip':
 				await message.channel.send(coinFlip())
+
 			elif command[1] == 'hmph!':
 				await message.channel.send('I-it\'s not like I l-like you or anything, b-baka!')
+
 			elif command[1] == 'timer':
 				if len(command) < 3:
 					await message.channel.send('Idiot! You forgot to add the time! You can do it like this: !baka timer [hr]:[min]:[sec] [message]')
@@ -108,6 +111,7 @@ async def on_message(message):
 						await message.channel.send(await timer(command[2]))
 					else:
 						await message.channel.send(await timer(command[2], command[3:]))
+
 			elif command[1] == 'he':
 				if command[2] == 'bought?' or command[2] == 'sold?':
 					dumpit = discord.Embed()
@@ -115,6 +119,7 @@ async def on_message(message):
 					await message.channel.send(embed=dumpit)
 				else:
 					await message.channel.send('He what?')
+
 			elif command[1] == 'hope':
 				if len(command) == 3 and command[2] == 'upload':
 					if message.author.id == 259841976696832030:
@@ -133,6 +138,7 @@ async def on_message(message):
 						await message.channel.send(await getHope(int(command[2])))
 					else:
 						await message.channel.send(await getHope())
+
 			else:
 				nocommand = 'You sussy baka! There is no'
 				first = True
