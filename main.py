@@ -1,4 +1,4 @@
-#main.py
+# main.py
 import discord
 from discord.ext import commands
 import random
@@ -65,6 +65,30 @@ async def getHope(id = -1):
 async def HopeCount():
 	count = (await client.db.fetch("SELECT count(*) FROM hopepics"))[0].get("count")
 	return ('The idiot has uploaded {} Hope pictures.'.format(count))
+
+async def checkUserMoneyExists(id):
+	count = (await client.db.fetch("SELECT count(*) FROM usereconomy WHERE id = $1", id))[0].get("count")
+	if count != 0:
+		return True
+	return False
+
+async def addMoney(id, amount):
+	await client.db.execute("INSERT INTO usereconomy (id, moneyamount) VALUES ($1, $2)", id, amount)
+	print("Money of amount {} added to user id: {}".format(amount, id))
+	return "You've been paid {} BakaCoins.".format(amount)
+
+# async def removeMoney(id, amount):
+
+# async def giveMoney(give_id, receive_id, amount):
+
+async def checkMoney(id):
+	if not await checkUserMoneyExists(id):
+		return "You have not initiated your wallet. Go get your free coins."
+	amount = (await client.db.fetch("SELECT moneyamount FROM usereconomy WHERE id = $1", id))[0].get("moneyamount")
+	if amount == 1:
+		return "You have 1 BakaCoin remaining. Better make it count loser, hahahaha."
+	return "You have {} BakaCoins in your wallet.".format(amount)
+
 
 
 
@@ -139,6 +163,17 @@ async def on_message(message):
 						await message.channel.send(await getHope(int(command[2])))
 					else:
 						await message.channel.send(await getHope())
+
+			elif command[1] == 'coin':
+				if len(command) == 3 and command[2] == 'initiate':
+					if not await checkUserMoneyExists(message.author.id):
+						await message.channel.send(await addMoney(message.author.id, 100))
+					else:
+						await message.channel.send('This idiot is trying to get more free money. Hahahahahaha.')
+				elif len(command) == 3 and command[2] == 'amount':
+					await message.channel.send(await checkMoney(message.author.id))
+				else:
+					await message.channel.send('Coin? Coin what?')
 
 			else:
 				nocommand = 'You sussy baka! There is no'
