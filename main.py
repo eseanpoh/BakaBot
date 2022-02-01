@@ -8,6 +8,7 @@ import os
 
 # Connect client to database
 async def create_db_pool():
+	# Replace localhost with your public IP here if you want to run the bot to test from your PC
 	client.db = await asyncpg.create_pool(dsn='postgres://bakaadmin:bakarissa@localhost:5432/bakabot')
 	print("Bakabot is connected to the bakabot database!")
 
