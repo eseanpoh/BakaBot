@@ -233,12 +233,14 @@ async def checkMoney(id):
 # Function to get the role object given the name of the role
 def getRole(reaction, guild):
 	if reaction == 'OW':
-		role = discord.utils.get(guild.roles, name='Overwatch')
+		role = "Overwatch"
 	elif reaction == 'Apex':
-		role = discord.utils.get(guild.roles, name='Apex Legends')
+		role = "Apex Legends"
 	elif reaction == 'MonHun':
-		role = discord.utils.get(guild.roles, name='Monster Hunter')
-	return role
+		role = "Monster Hunter"
+	else:
+		return None
+	return discord.utils.get(guild.roles, name=role)
 
 
 # When bot gets a reaction
