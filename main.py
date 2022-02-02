@@ -1,6 +1,7 @@
 # main.py
 import discord
 from discord.ext import commands
+from discord.ext.commands import CommandNotFound
 import random
 import asyncio
 import asyncpg
@@ -9,27 +10,95 @@ import asyncpg
 # Connect client to database
 async def create_db_pool():
 	client.db = await asyncpg.create_pool(dsn='postgres://bakaadmin:bakarissa@42.191.255.18:5432/bakabot')
-	print("BakaBot has connected to the BakaBot database!")
+	print('BakaBot has connected to the BakaBot database!')
+
+# Create client
+client = commands.Bot(command_prefix='!baka ', case_insensitive=True)
+
+
+# When bot is ready
+@client.event
+async def on_ready():
+	# im sorry carissa
+	# :)
+	print('I-it\'s not like I l-like you or anything... B-{0.user}!'.format(client))
+
+
+# Says phrase if baka is said alone. Adding a listener seems to be easiest way to achieve this. - Carissa
+@client.listen("on_message")
+async def baka(message):
+	# Ensures the bot doesn't respond to its own message
+	if message.author == client.user:
+		return
+
+	channel = message.channel
+	message = message.content.lower()
+	if message == "baka" or message == "!baka" or message == "baka!":
+		await channel.send("means stupid!")
+
+
+# When an invalid command is entered
+@client.event
+async def on_command_error(ctx, error):
+	if isinstance(error, CommandNotFound):
+		# Removes the "!baka " part of the original message
+		message = ctx.message.content[6:]
+		await ctx.send('You sussy baka! There is no "' + message + '" command!')
 
 
 # Coin flip function
-def coinFlip():
-	if random.randint(0, 1) == 0:
-		return "Heads!"
+@client.command()
+async def coinFlip(ctx):
+	if random.choice([0, 1]) == 0:
+		await ctx.send('Heads!')
 	else:
-		return "Tails!"
+		await ctx.send('Tails!')
+
+
+# Hmph command
+@client.command(aliases=["hmph!"])
+async def hmph(ctx):
+	await ctx.send("I-it's not like I l-like you or anything, b-baka!")
+
+
+# Bogdanoff command
+@client.command()
+async def he(ctx, argument: str = "n/a"):
+	argument = argument.lower()
+
+	# Embeds image and sends it
+	if argument == "bought?" or argument == "bought":
+		dumpit = discord.Embed()
+		dumpit.set_image(url="https://cdn.discordapp.com/attachments/251353278389026816/935197301645918218/aPZjBwn_460s.png")
+		await ctx.send(embed=dumpit)
+	elif argument == "sold?" or argument == "sold":  # TODO: This currently does the exact same thing as bought, someone please create a new image and change the image url - Carissa
+		dumpit = discord.Embed()
+		dumpit.set_image(url="https://cdn.discordapp.com/attachments/251353278389026816/935197301645918218/aPZjBwn_460s.png")
+		await ctx.send(embed=dumpit)
+	else:  # If no argument is provided or argument is invalid
+		await ctx.send("He what?")
 
 
 # Timer function to asynchronously parse the time given, and countdown, then returns to the message
-async def timer(time_str, message=None):
-	# Converts user inputted time into a list with each segment (hr:min:sec)
-	time_list = time_str.split(':')
+@client.command()
+async def timer(ctx, *, message: str = None):
+	# Checks if the arguments are empty
+	if message is None:
+		await ctx.send("Idiot! You forgot to add the time! You can do it like this: !baka timer [hr]:[min]:[sec] [message]")
+		return
+
+	# Splits message into list and gets the time argument
+	message = message.split(" ")
+	time_list = message[0].split(":")
+	message.pop(0)
 
 	# Checks for correct formatting
 	if len(time_list) != 3:
-		return "Idiot, if you can't even enter a correct time, it's time to get a watch! Use hr:min:sec!"
+		await ctx.send("Idiot, if you can't even enter a correct time, it's time to get a watch! Use [hr]:[min]:[sec]")
+		return
 	elif not all(i.isdigit() for i in time_list):
-		return "Hey, if you think a clock can be made out of alphabets or symbols, you might want to go back to elementary school. Use hr:min:sec!"
+		await ctx.send("Hey, if you think a clock can be made out of alphabets or symbols, you might want to go back to elementary school. Use [hr]:[min]:[sec]!")
+		return
 
 	# Converts inputted time to number of seconds
 	seconds = (int(time_list[0]) * 3600) + (int(time_list[1]) * 60) + int(time_list[2])
@@ -37,61 +106,90 @@ async def timer(time_str, message=None):
 	await asyncio.sleep(seconds)
 
 	# I reworked this part to be more straightforward instead of using loops and excess concatenations - Carissa
-	if message is not None:
+	if len(message) == 0:
+		# Default timer message if no message is provided
+		await ctx.send("Timer Alert: Your time is up dumbass! Hahahaha!")
+	else:
 		# Joins every word in the list together with a space
 		message = ' '.join(message)
 		message = 'Timer Alert: ' + message
-		return message
-	else:
-		# Default timer message if no message is provided
-		return "Timer Alert: Your time is up dumbass! Hahahaha!"
-
-
-# Function to get the role object given the name of the role
-def getRole(reaction, guild):
-	if reaction == 'OW':
-		role = discord.utils.get(guild.roles, name='Overwatch')
-	elif reaction =='Apex':
-		role = discord.utils.get(guild.roles, name='Apex Legends')
-	elif reaction == 'MonHun':
-		role = discord.utils.get(guild.roles, name='Monster Hunter')
-	return role
+		await ctx.send(message)
 
 
 # Function for uploading Hope pictures
-async def uploadHope(attachments):
+@client.command()
+async def hhope(ctx, argument: str = None): # TODO: CHANGE FROM HHOPE TO HOPE ONCE ANGE IS AWAKE
 	# Fetches the total number of Hope pics from the database
 	count = (await client.db.fetch("SELECT count(*) FROM hopepics"))[0].get("count")
 
-	# Uploads each photo attached to message and increases count for each one
-	for picture in attachments:
-		link = picture.url
-		await client.db.execute("INSERT INTO hopepics (id, url) VALUES ($1, $2)", count, link)
-		print("Picture uploaded with ID: {} and Link: {}".format(count, link))
-		count += 1
-	return "Hey dummy Hope simp, all pictures have been uploaded."
+	if argument is None:
+		# If nothing else is specified, get random hope pic
+		id = random.randint(0, count-1)
+		await ctx.send((await client.db.fetch("SELECT url FROM hopepics WHERE id = $1", id))[0].get("url"))
+		return
+
+	argument = argument.lower()
+
+	# If block for all arguments
+	if argument == "count":  # Sends the total number of Hope pictures
+		await ctx.send('The idiot has uploaded {} Hope pictures.'.format(count))
+
+	elif argument == "upload":  # For uploading Hope photos
+		# Prevents anyone other than Carissa from being able upload photos
+		if ctx.message.author.id != 259841976696832030:
+			await ctx.send("Wait a minute you're not Carissa, why are you trying to upload Hope pics?")
+			return
+
+		# Get attachments linked to message
+		attachments = ctx.message.attachments
+
+		# Checks if no attachments are in message
+		if not attachments:
+			await ctx.send("Either you're blind, or you've just uploaded Schrodinger's cat!")
+			return
+
+		# Uploads each photo attached to message and increases count for each one
+		for picture in attachments:
+			link = picture.url
+			await client.db.execute("INSERT INTO hopepics (id, url) VALUES ($1, $2)", count, link)
+			print("Picture uploaded with ID: {} and Link: {}".format(count, link))
+			count += 1
+		await ctx.send("Hey dummy Hope simp, all pictures have been uploaded.")
+
+	elif argument.isdigit():  # If the user wants a specific Hope picture
+		id = int(argument)
+
+		# If the photo is out of range, get a random one instead
+		if id < 0 or id >= count:
+			id = random.randint(0, count-1)
+
+		await ctx.send((await client.db.fetch("SELECT url FROM hopepics WHERE id = $1", id))[0].get("url"))
+
+	else:  # If the argument doesn't match anything else
+		await ctx.send("This idiot can't type numbers hahaha! Use !baka hope [number] to get a specific picture.")
 
 
-# Function for getting Hope pictures to upload into chat
-async def getHope(id=-1):
-	# Fetches total number of Hope pics from the database
-	count = (await client.db.fetch("SELECT count(*) FROM hopepics"))[0].get("count")
+# Command that handles coins
+@client.command(aliases=["bakacoin", "coins"])
+async def coin(ctx, argument: str = None):
+	# If no arguments are provided
+	if argument is None:
+		await ctx.send("Coin? Coin what? Use !baka coin [initiate/amount].")
+		return
 
-	# If a specified picture id is requested
-	if 0 <= id < count:
-		return (await client.db.fetch("SELECT url FROM hopepics WHERE id = $1", id))[0].get("url")
+	argument = argument.lower()
+	id = ctx.message.author.id
 
-	# If no id is specified or id is past id range, selects a random Hope photo
-	id = random.randint(0, count-1)
-	return (await client.db.fetch("SELECT url FROM hopepics WHERE id = $1", id))[0].get("url")
-
-
-# Function for returning how many Hope pictures have been uploaded
-async def HopeCount():
-	# Fetches total number of Hope pics from the database
-	count = (await client.db.fetch("SELECT count(*) FROM hopepics"))[0].get("count")
-
-	return 'The idiot has uploaded {} Hope pictures.'.format(count)
+	# For initiating a new account
+	if argument == "initiate":
+		if not await checkUserMoneyExists(id):
+			await ctx.send(await addMoney(id, 100))
+		else:
+			await ctx.send("This idiot is trying to get more free money. Hahahahahaha!")
+	elif argument == "amount" or argument == "wallet" or argument == "balance":  # For checking balance
+		await ctx.send(await checkMoney(id))
+	else:  # If the argument is not valid
+		await ctx.send("Coin? Coin what? Use !baka coin [initiate/balance].")
 
 
 # Checks whether or not the user has initiated their coin wallet
@@ -110,10 +208,10 @@ async def addMoney(id, amount):
 	return "You've been paid {} BakaCoins.".format(amount)
 
 
-# async def removeMoney(id, amount):
+# async def removeMoney(id, amount): TODO: Finish this function
 
 
-# async def giveMoney(give_id, receive_id, amount):
+# async def giveMoney(give_id, receive_id, amount): TODO: Finish this function
 
 
 # Tells the user how many coins they have in their wallet
@@ -130,103 +228,15 @@ async def checkMoney(id):
 	return "You have {} BakaCoins in your wallet.".format(amount)
 
 
-# Create client
-intents = discord.Intents.default()
-intents.members = True
-client = commands.Bot(command_prefix = '!baka', intents = intents)
-
-
-# When bot is ready
-@client.event
-async def on_ready():
-	# im sorry carissa
-	# :)
-	print('I-it\'s not like I l-like you or anything... B-{0.user}!'.format(client))
-
-
-# When bot reads a message
-@client.event
-async def on_message(message):
-	# If message is from the bot, return
-	if message.author == client.user:
-		return
-
-	# If message is a command starting with '!baka'
-	if message.content.startswith('!baka'):
-		command = message.content.lower().split(' ')
-		
-		# If command has no arguments
-		if len(command) < 2:
-			await message.channel.send('means stupid!')
-
-		# If command has 1 or more arguments
-		else:
-			
-			if command[1] == 'coinflip':
-				await message.channel.send(coinFlip())
-
-			elif command[1] == 'hmph!':
-				await message.channel.send('I-it\'s not like I l-like you or anything, b-baka!')
-
-			elif command[1] == 'timer':
-				if len(command) < 3:
-					await message.channel.send('Idiot! You forgot to add the time! You can do it like this: !baka timer [hr]:[min]:[sec] [message]')
-				else:
-					if (len(command) < 4):
-						await message.channel.send(await timer(command[2]))
-					else:
-						await message.channel.send(await timer(command[2], command[3:]))
-
-			elif command[1] == 'he':
-				if command[2] == 'bought?' or command[2] == 'sold?':
-					dumpit = discord.Embed()
-					dumpit.set_image(url="https://cdn.discordapp.com/attachments/251353278389026816/935197301645918218/aPZjBwn_460s.png")
-					await message.channel.send(embed=dumpit)
-				else:
-					await message.channel.send('He what?')
-
-			elif command[1] == 'hope':
-				if len(command) == 3 and command[2] == 'upload':
-					if message.author.id == 259841976696832030:
-						if message.attachments:
-							await message.channel.send(await uploadHope(message.attachments))
-						else:
-							await message.channel.send('Either you\'re blind, or you\'ve just uploaded Schrodinger\'s cat.')
-					else:
-						await message.channel.send('Wait a minute you\'re not Carissa, why are you trying to upload Hope pics?')
-				elif len(command) == 3 and command[2] == 'count':
-					await message.channel.send(await HopeCount())
-				else:
-					if len(command) == 3 and not command[2].isdigit() and command[2] != 'upload':
-						await message.channel.send('This idiot can\'t type numbers hahaha!')
-					elif len(command) == 3:
-						await message.channel.send(await getHope(int(command[2])))
-					else:
-						await message.channel.send(await getHope())
-
-			elif command[1] == 'coin':
-				if len(command) == 3 and command[2] == 'initiate':
-					if not await checkUserMoneyExists(message.author.id):
-						await message.channel.send(await addMoney(message.author.id, 100))
-					else:
-						await message.channel.send('This idiot is trying to get more free money. Hahahahahaha.')
-				elif len(command) == 3 and command[2] == 'amount':
-					await message.channel.send(await checkMoney(message.author.id))
-				else:
-					await message.channel.send('Coin? Coin what?')
-
-			else:
-				nocommand = 'You sussy baka! There is no'
-				first = True
-				for i in command[1:]:
-					if first:
-						nocommand += ' \''
-						first = False
-					else:
-						nocommand += ' '
-					nocommand += i
-				nocommand += '\' command!'
-				await message.channel.send(nocommand)
+# Function to get the role object given the name of the role
+def getRole(reaction, guild):
+	if reaction == 'OW':
+		role = discord.utils.get(guild.roles, name='Overwatch')
+	elif reaction == 'Apex':
+		role = discord.utils.get(guild.roles, name='Apex Legends')
+	elif reaction == 'MonHun':
+		role = discord.utils.get(guild.roles, name='Monster Hunter')
+	return role
 
 
 # When bot gets a reaction
@@ -283,6 +293,7 @@ async def on_raw_reaction_remove(payload):
 				print('User not found')
 		else:
 			print('Role not found')
+
 
 # Run database continuously
 client.loop.run_until_complete(create_db_pool())
