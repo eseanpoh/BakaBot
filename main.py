@@ -12,8 +12,10 @@ async def create_db_pool():
 	client.db = await asyncpg.create_pool(dsn='postgres://bakaadmin:bakarissa@42.191.255.18:5432/bakabot')
 	print('BakaBot has connected to the BakaBot database!')
 
-# Create client
-client = commands.Bot(command_prefix='!baka ', case_insensitive=True)
+# Create client with intents to be able to check members of a guild
+intents = discord.Intents.default()
+intents.members = True
+client = commands.Bot(command_prefix='!baka ', case_insensitive=True, intents=intents)
 
 
 # When bot is ready
@@ -118,7 +120,7 @@ async def timer(ctx, *, message: str = None):
 
 # Function for uploading Hope pictures
 @client.command()
-async def hhope(ctx, argument: str = None): # TODO: CHANGE FROM HHOPE TO HOPE ONCE ANGE IS AWAKE
+async def hope(ctx, argument: str = None):
 	# Fetches the total number of Hope pics from the database
 	count = (await client.db.fetch("SELECT count(*) FROM hopepics"))[0].get("count")
 
