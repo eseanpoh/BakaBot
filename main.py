@@ -4,50 +4,66 @@ from discord.ext import commands
 import random
 import asyncio
 import asyncpg
-import os
+
 
 # Connect client to database
 async def create_db_pool():
 	client.db = await asyncpg.create_pool(dsn='postgres://bakaadmin:bakarissa@42.191.255.18:5432/bakabot')
-	print("Bakabot is connected to the bakabot database!")
+	print("BakaBot has connected to the BakaBot database!")
 
 
 # Coin flip function
 def coinFlip():
-	if random.randint(0,1) == 0:
+	if random.randint(0, 1) == 0:
 		return "Heads!"
 	else:
 		return "Tails!"
 
+
 # Timer function to asynchronously parse the time given, and countdown, then returns to the message
-async def timer(time_str, message = None):
+async def timer(time_str, message=None):
+	# Converts user inputted time into a list with each segment (hr:min:sec)
 	time_list = time_str.split(':')
-	if (len(time_list) != 3):
-		return "Idiot, if you can't even enter a correct time, it's time to get a watch!"
+
+	# Checks for correct formatting
+	if len(time_list) != 3:
+		return "Idiot, if you can't even enter a correct time, it's time to get a watch! Use hr:min:sec!"
 	elif not all(i.isdigit() for i in time_list):
-		return "Hey, if you think a clock can be made out of alphabets or symbols, you might want to go back to elementary school."
+		return "Hey, if you think a clock can be made out of alphabets or symbols, you might want to go back to elementary school. Use hr:min:sec!"
+
+	# Converts inputted time to number of seconds
 	seconds = (int(time_list[0]) * 3600) + (int(time_list[1]) * 60) + int(time_list[2])
+	# Waits for the time specified
 	await asyncio.sleep(seconds)
+
+	# I reworked this part to be more straightforward instead of using loops and excess concatenations - Carissa
 	if message is not None:
-		completemessage = 'Timer Alert: '
-		for i in message:
-			completemessage = completemessage + i + ' '
-		return completemessage
+		# Joins every word in the list together with a space
+		message = ' '.join(message)
+		message = 'Timer Alert: ' + message
+		return message
 	else:
+		# Default timer message if no message is provided
 		return "Timer Alert: Your time is up dumbass! Hahahaha!"
+
 
 # Function to get the role object given the name of the role
 def getRole(reaction, guild):
-	if (reaction == 'OW'):
+	if reaction == 'OW':
 		role = discord.utils.get(guild.roles, name='Overwatch')
-	elif (reaction =='Apex'):
+	elif reaction =='Apex':
 		role = discord.utils.get(guild.roles, name='Apex Legends')
-	elif (reaction == 'MonHun'):
+	elif reaction == 'MonHun':
 		role = discord.utils.get(guild.roles, name='Monster Hunter')
 	return role
 
+
+# Function for uploading Hope pictures
 async def uploadHope(attachments):
+	# Fetches the total number of Hope pics from the database
 	count = (await client.db.fetch("SELECT count(*) FROM hopepics"))[0].get("count")
+
+	# Uploads each photo attached to message and increases count for each one
 	for picture in attachments:
 		link = picture.url
 		await client.db.execute("INSERT INTO hopepics (id, url) VALUES ($1, $2)", count, link)
@@ -55,41 +71,63 @@ async def uploadHope(attachments):
 		count += 1
 	return "Hey dummy Hope simp, all pictures have been uploaded."
 
-async def getHope(id = -1):
+
+# Function for getting Hope pictures to upload into chat
+async def getHope(id=-1):
+	# Fetches total number of Hope pics from the database
 	count = (await client.db.fetch("SELECT count(*) FROM hopepics"))[0].get("count")
-	if id >= 0 and id < count:
+
+	# If a specified picture id is requested
+	if 0 <= id < count:
 		return (await client.db.fetch("SELECT url FROM hopepics WHERE id = $1", id))[0].get("url")
+
+	# If no id is specified or id is past id range, selects a random Hope photo
 	id = random.randint(0, count-1)
 	return (await client.db.fetch("SELECT url FROM hopepics WHERE id = $1", id))[0].get("url")
 
-async def HopeCount():
-	count = (await client.db.fetch("SELECT count(*) FROM hopepics"))[0].get("count")
-	return ('The idiot has uploaded {} Hope pictures.'.format(count))
 
+# Function for returning how many Hope pictures have been uploaded
+async def HopeCount():
+	# Fetches total number of Hope pics from the database
+	count = (await client.db.fetch("SELECT count(*) FROM hopepics"))[0].get("count")
+
+	return 'The idiot has uploaded {} Hope pictures.'.format(count)
+
+
+# Checks whether or not the user has initiated their coin wallet
 async def checkUserMoneyExists(id):
 	count = (await client.db.fetch("SELECT count(*) FROM usereconomy WHERE id = $1", id))[0].get("count")
 	if count != 0:
 		return True
 	return False
 
+
+# Adds money to a user's wallet
 async def addMoney(id, amount):
 	await client.db.execute("INSERT INTO usereconomy (id, moneyamount) VALUES ($1, $2)", id, amount)
 	print("Money of amount {} added to user id: {}".format(amount, id))
+
 	return "You've been paid {} BakaCoins.".format(amount)
+
 
 # async def removeMoney(id, amount):
 
+
 # async def giveMoney(give_id, receive_id, amount):
 
+
+# Tells the user how many coins they have in their wallet
 async def checkMoney(id):
+	# If wallet has not been initiated yet
 	if not await checkUserMoneyExists(id):
 		return "You have not initiated your wallet. Go get your free coins."
+
+	# Fetches coin amount from database
 	amount = (await client.db.fetch("SELECT moneyamount FROM usereconomy WHERE id = $1", id))[0].get("moneyamount")
 	if amount == 1:
 		return "You have 1 BakaCoin remaining. Better make it count loser, hahahaha."
+
 	return "You have {} BakaCoins in your wallet.".format(amount)
-
-
 
 
 # Create client
@@ -97,12 +135,14 @@ intents = discord.Intents.default()
 intents.members = True
 client = commands.Bot(command_prefix = '!baka', intents = intents)
 
+
 # When bot is ready
 @client.event
 async def on_ready():
 	# im sorry carissa
 	# :)
 	print('I-it\'s not like I l-like you or anything... B-{0.user}!'.format(client))
+
 
 # When bot reads a message
 @client.event
@@ -188,25 +228,26 @@ async def on_message(message):
 				nocommand += '\' command!'
 				await message.channel.send(nocommand)
 
+
 # When bot gets a reaction
 @client.event
 async def on_raw_reaction_add(payload):
 	message_id = payload.message_id
 	# If reaction is from a specified message
-	if (message_id == 934046929824923680):
+	if message_id == 934046929824923680:
 		# Get server object
 		guild = client.get_guild(payload.guild_id)
 
 		# Select the correct role for the reaction
-		role = getRole(payload.emoji.name, guild);
+		role = getRole(payload.emoji.name, guild)
 
 		# If role exists
-		if (role != None):
+		if role is not None:
 			# Get the member object of the user who reacted
 			member = guild.get_member(payload.user_id)
 
 			# If the user exists
-			if (member != None):
+			if member is not None:
 				# Add role to the user
 				await member.add_roles(role)
 				print("{} role added for user {}".format(role, member))
@@ -215,25 +256,26 @@ async def on_raw_reaction_add(payload):
 		else:
 			print('Role not found')
 
+
 # When bot gets an un-reaction
 @client.event
 async def on_raw_reaction_remove(payload):
 	message_id = payload.message_id
 	# If un-reaction is from a certain message
-	if (message_id == 934046929824923680):
+	if message_id == 934046929824923680:
 		# Get server object
 		guild = client.get_guild(payload.guild_id)
 
 		# Select the correct role for the un-reaction
-		role = getRole(payload.emoji.name, guild);
+		role = getRole(payload.emoji.name, guild)
 
 		# If role exists
-		if (role != None):
+		if role is not None:
 			# Get the user id of the user who un-reacted
 			member = guild.get_member(payload.user_id)
 
 			# If the user exists
-			if (member != None):
+			if member is not None:
 				# Remove role from the user
 				await member.remove_roles(role)
 				print("{} role removed for user {}".format(role, member))
@@ -245,5 +287,5 @@ async def on_raw_reaction_remove(payload):
 # Run database continuously
 client.loop.run_until_complete(create_db_pool())
 
-# Grabs bot's unique token and runs it, do not leak this token or we are fucked
+# Grabs the bot's unique token and runs it, do not leak this token or we are fucked
 client.run('ODkwNTIzODk5NzQ4NTgxMzk3.YUxDAg.DXg9TPad2LjJUjcHzq5-8gPgQRQ')
