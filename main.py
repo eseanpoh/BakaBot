@@ -238,6 +238,8 @@ def getRole(reaction, guild):
 		role = "Apex Legends"
 	elif reaction == 'MonHun':
 		role = "Monster Hunter"
+	elif reaction == "Minecraft":
+		role = "Minecraft"
 	else:
 		return None
 	return discord.utils.get(guild.roles, name=role)
