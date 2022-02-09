@@ -5,8 +5,9 @@ from discord.ext.commands import CommandNotFound
 import random
 import asyncio
 import asyncpg
+import uwuify
 
-test_env = True
+test_env = False
 
 bot_token = ""
 if test_env:
@@ -185,6 +186,18 @@ async def hope(ctx, argument: str = None):
 
 	else:  # If the argument doesn't match anything else
 		await ctx.send("This idiot can't type numbers hahaha! Use !baka hope [number] to get a specific picture.")
+
+# Cursed command to uwuify a sentence
+@client.command(aliases=["owo", "uwuify", "uwufy"])
+async def uwu(ctx, *, message: str = None):
+	# If no sentence is provided
+	if message is None:
+		await ctx.send("OwO")
+		return
+	flags = uwuify.SMILEY
+	await ctx.send(uwuify.uwu(message, flags = flags))
+	return
+
 
 
 # Command that handles coins
