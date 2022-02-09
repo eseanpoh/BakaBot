@@ -6,7 +6,7 @@ import random
 import asyncio
 import asyncpg
 
-test_env = False
+test_env = True
 
 bot_token = ""
 if test_env:
@@ -36,21 +36,23 @@ async def on_ready():
 	print('I-it\'s not like I l-like you or anything... B-{0.user}!'.format(client))
 
 
-# Says phrase if baka is said alone. Adding a listener seems to be easiest way to achieve this. - Carissa
-@client.listen("on_message")
-async def baka(message):
+# Triggers on each command message
+@client.event
+async def on_message(msg):
 	# Ensures the bot doesn't respond to its own message
-	if message.author == client.user:
+	if msg.author == client.user:
 		return
 
-	channel = message.channel
+	channel = msg.channel
 
 	if channel.id != bot_channel_id:
 		return
 
-	message = message.content.lower()
+	message = msg.content.lower()
 	if message == "baka" or message == "!baka" or message == "baka!":
 		await channel.send("means stupid!")
+
+	await client.process_commands(msg)
 
 
 # When an invalid command is entered
