@@ -6,6 +6,16 @@ import random
 import asyncio
 import asyncpg
 
+test_env = False
+
+bot_token = ""
+if test_env:
+	bot_token = "OTM4ODA0MTgyMzA2MTU2NTc1.Yfvnhw.T9ghDZe0gZe57Mo6--G-Vadv3M8"
+	bot_channel_id = 938410969221202021
+else:
+	bot_token = "ODkwNTIzODk5NzQ4NTgxMzk3.YUxDAg.DXg9TPad2LjJUjcHzq5-8gPgQRQ"
+	bot_channel_id = 251353278389026816
+
 
 # Connect client to database
 async def create_db_pool():
@@ -34,6 +44,10 @@ async def baka(message):
 		return
 
 	channel = message.channel
+
+	if channel.id != bot_channel_id:
+		return
+
 	message = message.content.lower()
 	if message == "baka" or message == "!baka" or message == "baka!":
 		await channel.send("means stupid!")
@@ -305,4 +319,4 @@ async def on_raw_reaction_remove(payload):
 client.loop.run_until_complete(create_db_pool())
 
 # Grabs the bot's unique token and runs it, do not leak this token or we are fucked
-client.run('ODkwNTIzODk5NzQ4NTgxMzk3.YUxDAg.DXg9TPad2LjJUjcHzq5-8gPgQRQ')
+client.run(bot_token)
