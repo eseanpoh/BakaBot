@@ -7,6 +7,7 @@ import asyncio
 import asyncpg
 import uwuify
 
+# Set to True to use the test bot, False to use the real bot
 test_env = False
 
 bot_token = ""
@@ -20,7 +21,7 @@ else:
 
 # Connect client to database
 async def create_db_pool():
-	client.db = await asyncpg.create_pool(dsn='postgres://bakaadmin:bakarissa@42.191.255.18:5432/bakabot')
+	client.db = await asyncpg.create_pool(dsn='postgres://bakaadmin:bakarissa@42.191.240.3:5432/bakabot')
 	print('BakaBot has connected to the BakaBot database!')
 
 # Create client with intents to be able to check members of a guild
@@ -52,6 +53,7 @@ async def on_message(msg):
 	message = msg.content.lower()
 	if message == "baka" or message == "!baka" or message == "baka!":
 		await channel.send("means stupid!")
+		return
 
 	await client.process_commands(msg)
 
@@ -202,13 +204,13 @@ async def uwu(ctx, *, message: str = None):
 
 # Command that handles coins
 @client.command(aliases=["bakacoin", "coins"])
-async def coin(ctx, argument: str = None):
+async def coin(ctx, *arguments):
 	# If no arguments are provided
-	if argument is None:
-		await ctx.send("Coin? Coin what? Use !baka coin [initiate/amount].")
+	if not arguments:
+		await ctx.send("Coin? Coin what? Use !baka coin [initiate/amount/pay].")
 		return
 
-	argument = argument.lower()
+	argument = arguments[0].lower()
 	id = ctx.message.author.id
 
 	# For initiating a new account
@@ -219,6 +221,35 @@ async def coin(ctx, argument: str = None):
 			await ctx.send("This idiot is trying to get more free money. Hahahahahaha!")
 	elif argument == "amount" or argument == "wallet" or argument == "balance":  # For checking balance
 		await ctx.send(await checkMoney(id))
+	elif argument == "pay":  # For giving coins to others
+		if not await checkUserMoneyExists(id):
+			await ctx.send("You have not initiated your wallet. Go get your free coins.")
+			return
+
+		if len(arguments) == 3:
+			if arguments[1].isdigit():
+				amount = int(arguments[1])
+				if amount > 0:
+					if await checkEnoughMoney(id, transfer_amount=amount):
+						mention = arguments[2]
+						to_id = parseUserIdFromMention(mention)
+
+						if not to_id:
+							await ctx.send("Mention the person you want to pay.")
+						elif to_id == int(id):
+							await ctx.send("You can't pay yourself.")
+						elif not await checkUserMoneyExists(to_id):
+							await ctx.send("The user has not initiated their wallet.")
+						else:
+							await ctx.send(await giveMoney(give_id=id, receive_id=to_id, amount=amount))
+					else:
+						await ctx.send("You don't have enough money, smh broke bitches.")
+				else:
+					await ctx.send("You can't pay someone nothing.")
+			else:
+				await ctx.send("Put in a real amount, dummy!")
+		else:
+			await ctx.send("Use !baka coin pay [amount] [mention].")
 	else:  # If the argument is not valid
 		await ctx.send("Coin? Coin what? Use !baka coin [initiate/balance].")
 
@@ -242,7 +273,12 @@ async def addMoney(id, amount):
 # async def removeMoney(id, amount): TODO: Finish this function
 
 
-# async def giveMoney(give_id, receive_id, amount): TODO: Finish this function
+# Transfers money to a user's wallet
+async def giveMoney(give_id, receive_id, amount):
+	await client.db.execute("UPDATE usereconomy SET moneyamount = moneyamount - $1 WHERE id = $2", amount, give_id)
+	await client.db.execute("UPDATE usereconomy SET moneyamount = moneyamount + $1 WHERE id = $2", amount, receive_id)
+
+	return f"You have paid <@{receive_id}> {amount} BakaCoins."
 
 
 # Tells the user how many coins they have in their wallet
@@ -258,6 +294,30 @@ async def checkMoney(id):
 
 	return "You have {} BakaCoins in your wallet.".format(amount)
 
+
+# Checks if user has enough coins in wallet
+async def checkEnoughMoney(id, transfer_amount):
+	# Fetches coin amount from database
+	amount = (await client.db.fetch("SELECT moneyamount FROM usereconomy WHERE id = $1", id))[0].get("moneyamount")
+	if amount >= transfer_amount:
+		return True
+	else:
+		return False
+
+
+# Parse user id from Mention format
+def parseUserIdFromMention(mention: str = ""):
+	if not mention:
+		return False
+
+	if mention.startswith('<@') and mention.endswith('>'):
+		user_id = mention[1:][:len(mention)-2].replace("@", "").replace("!", "")
+		if user_id.isdigit():
+			return int(user_id)
+		else:
+			return False
+	else:
+		return False
 
 # Function to get the role object given the name of the role
 def getRole(reaction, guild):
