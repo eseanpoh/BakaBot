@@ -189,6 +189,7 @@ async def hope(ctx, argument: str = None):
 	else:  # If the argument doesn't match anything else
 		await ctx.send("This idiot can't type numbers hahaha! Use !baka hope [number] to get a specific picture.")
 
+
 # Cursed command to uwuify a sentence
 @client.command(aliases=["owo", "uwuify", "uwufy"])
 async def uwu(ctx, *, message: str = None):
@@ -199,7 +200,6 @@ async def uwu(ctx, *, message: str = None):
 	flags = uwuify.SMILEY
 	await ctx.send(uwuify.uwu(message, flags = flags))
 	return
-
 
 
 # Command that handles coins
@@ -216,42 +216,46 @@ async def coin(ctx, *arguments):
 	# For initiating a new account
 	if argument == "initiate":
 		if not await checkUserMoneyExists(id):
-			await ctx.send(await addMoney(id, 100))
+			await ctx.send(await initiateWallet(id, 100))
 		else:
 			await ctx.send("This idiot is trying to get more free money. Hahahahahaha!")
 	elif argument == "amount" or argument == "wallet" or argument == "balance":  # For checking balance
 		await ctx.send(await checkMoney(id))
 	elif argument == "pay":  # For giving coins to others
-		if not await checkUserMoneyExists(id):
-			await ctx.send("You have not initiated your wallet. Go get your free coins.")
-			return
-
-		if len(arguments) == 3:
-			if arguments[1].isdigit():
-				amount = int(arguments[1])
-				if amount > 0:
-					if await checkEnoughMoney(id, transfer_amount=amount):
-						mention = arguments[2]
-						to_id = parseUserIdFromMention(mention)
-
-						if not to_id:
-							await ctx.send("Mention the person you want to pay.")
-						elif to_id == int(id):
-							await ctx.send("You can't pay yourself.")
-						elif not await checkUserMoneyExists(to_id):
-							await ctx.send("The user has not initiated their wallet.")
-						else:
-							await ctx.send(await giveMoney(give_id=id, receive_id=to_id, amount=amount))
-					else:
-						await ctx.send("You don't have enough money, smh broke bitches.")
-				else:
-					await ctx.send("You can't pay someone nothing.")
-			else:
-				await ctx.send("Put in a real amount, dummy!")
-		else:
-			await ctx.send("Use !baka coin pay [amount] [mention].")
+		await ctx.send(await transferMoney(id, arguments))
 	else:  # If the argument is not valid
 		await ctx.send("Coin? Coin what? Use !baka coin [initiate/balance].")
+
+
+# Transfers money from one user to another
+async def transferMoney(id, arguments):
+	if not await checkUserMoneyExists(id):
+		return "You have not initiated your wallet. Go get your free coins."
+
+	if len(arguments) == 3:
+		if arguments[1].isdigit():
+			amount = int(arguments[1])
+			if amount > 0:
+				if await checkEnoughMoney(id, transfer_amount=amount):
+					mention = arguments[2]
+					to_id = parseUserIdFromMention(mention)
+
+					if not to_id:
+						return "Mention the person you want to pay."
+					elif to_id == int(id):
+						return "You can't pay yourself."
+					elif not await checkUserMoneyExists(to_id):
+						return "The user has not initiated their wallet."
+					else:
+						return await giveMoney(give_id=id, receive_id=to_id, amount=amount)
+				else:
+					return "You don't have enough money, smh broke bitches."
+			else:
+				return "You can't pay someone nothing."
+		else:
+			return "Put in a real amount, dummy!"
+	else:
+		return "Use !baka coin pay [amount] [mention]."
 
 
 # Checks whether or not the user has initiated their coin wallet
@@ -262,21 +266,33 @@ async def checkUserMoneyExists(id):
 	return False
 
 
+# Initiates user wallet
+async def initiateWallet(id, amount):
+	await client.db.execute("INSERT INTO usereconomy (id, moneyamount) VALUES ($1, $2)", id, amount)
+	print("Money of amount {} added to user id: {}".format(amount, id))
+
+	return "Your wallet has been initiated. You have received {} BakaCoins.".format(amount)
+
+
 # Adds money to a user's wallet
 async def addMoney(id, amount):
-	await client.db.execute("INSERT INTO usereconomy (id, moneyamount) VALUES ($1, $2)", id, amount)
+	await client.db.execute("UPDATE usereconomy SET moneyamount = moneyamount + $1 WHERE id = $2", amount, id)
 	print("Money of amount {} added to user id: {}".format(amount, id))
 
 	return "You've been paid {} BakaCoins.".format(amount)
 
 
-# async def removeMoney(id, amount): TODO: Finish this function
+async def removeMoney(id, amount):
+	await client.db.execute("UPDATE usereconomy SET moneyamount = moneyamount - $1 WHERE id = $2", amount, id)
+	print("Money of amount {} removed from user id: {}".format(amount, id))
+
+	return "You have paid {} BakaCoins.".format(amount)
 
 
 # Transfers money to a user's wallet
 async def giveMoney(give_id, receive_id, amount):
-	await client.db.execute("UPDATE usereconomy SET moneyamount = moneyamount - $1 WHERE id = $2", amount, give_id)
-	await client.db.execute("UPDATE usereconomy SET moneyamount = moneyamount + $1 WHERE id = $2", amount, receive_id)
+	await removeMoney(give_id, amount)
+	await addMoney(receive_id, amount)
 
 	return f"You have paid <@{receive_id}> {amount} BakaCoins."
 
