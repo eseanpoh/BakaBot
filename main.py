@@ -6,6 +6,8 @@ import random
 import asyncio
 import asyncpg
 import uwuify
+import blackjack
+
 
 # Set to True to use the test bot, False to use the real bot
 test_env = False
@@ -21,7 +23,7 @@ else:
 
 # Connect client to database
 async def create_db_pool():
-	client.db = await asyncpg.create_pool(dsn='postgres://bakaadmin:bakarissa@42.191.240.3:5432/bakabot')
+	client.db = await asyncpg.create_pool(dsn='postgres://bakaadmin:bakarissa@42.191.241.188:5432/bakabot')
 	print('BakaBot has connected to the BakaBot database!')
 
 # Create client with intents to be able to check members of a guild
@@ -201,6 +203,55 @@ async def uwu(ctx, *, message: str = None):
 	await ctx.send(uwuify.uwu(message, flags = flags))
 	return
 
+
+activePlayers = []
+blackjackTables = []
+
+
+# Blackjack
+@client.command()
+async def blackjack(ctx, argument: str = None):
+	# If no arguments are provided
+	if argument is None:
+		await ctx.send("Hey doofus, you need another command in '!baka blackjack [join/leave]'.")
+		return
+	argument = argument.lower()
+
+	if argument == 'join':
+		if ctx.message.author.id in activePlayers:
+			await ctx.send("You're already in a game, smooth brain.")
+			return
+		addBlackjack(ctx.message.author.id, ctx.channel)
+	elif argument == 'leave':
+		if ctx.message.author.id not in activePlayers:
+			await ctx.send("You're not in a game, smooth brain.")
+			return
+		removeBlackjack(ctx.message.author.id, ctx.channel)
+	else:
+		await ctx.send("Dimwit, the command is '!baka blackjack [join/leave]'.")
+		return
+
+
+async def addBlackjack(id, channel):
+	activePlayers.append(id)
+	for table in blackjackTables:
+		if table.channel == channel:
+			if len(table.playerList) < 4:
+				table.addPlayer(id)
+				return
+	blackjackTables.append(blackjack.Table(channel, [id]))
+	return
+
+
+async def removeBlackjack(id, channel):
+	activePlayers.remove(id)
+	for table in blackjackTables:
+		if table.channel == channel:
+			for player in table.playerList:
+				if player == id:
+					table.removePlayer(id)
+					return
+	
 
 # Command that handles coins
 @client.command(aliases=["bakacoin", "coins"])
@@ -408,6 +459,7 @@ async def on_raw_reaction_remove(payload):
 
 # Run database continuously
 client.loop.run_until_complete(create_db_pool())
+
 
 # Grabs the bot's unique token and runs it, do not leak this token or we are fucked
 client.run(bot_token)
