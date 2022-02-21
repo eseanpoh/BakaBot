@@ -6,11 +6,11 @@ import random
 import asyncio
 import asyncpg
 import uwuify
-import blackjack
+import blackjack as blackjackInitiate
 
 
 # Set to True to use the test bot, False to use the real bot
-test_env = False
+test_env = True
 
 bot_token = ""
 if test_env:
@@ -221,12 +221,13 @@ async def blackjack(ctx, argument: str = None):
 		if ctx.message.author.id in activePlayers:
 			await ctx.send("You're already in a game, smooth brain.")
 			return
-		addBlackjack(ctx.message.author.id, ctx.channel)
+		await addBlackjack(ctx.message.author.id, ctx.channel)
+
 	elif argument == 'leave':
 		if ctx.message.author.id not in activePlayers:
 			await ctx.send("You're not in a game, smooth brain.")
 			return
-		removeBlackjack(ctx.message.author.id, ctx.channel)
+		await removeBlackjack(ctx.message.author.id, ctx.channel)
 	else:
 		await ctx.send("Dimwit, the command is '!baka blackjack [join/leave]'.")
 		return
@@ -239,7 +240,8 @@ async def addBlackjack(id, channel):
 			if len(table.playerList) < 4:
 				table.addPlayer(id)
 				return
-	blackjackTables.append(blackjack.Table(channel, [id]))
+	blackjackTables.append(blackjackInitiate.Table(channel, id))
+	await blackjackTables[-1].runTable()
 	return
 
 
@@ -250,8 +252,9 @@ async def removeBlackjack(id, channel):
 			for player in table.playerList:
 				if player == id:
 					table.removePlayer(id)
-					return
-	
+	blackjackTables = [table for table in blackjackTables if len(table.playerList) != 0]
+	return
+
 
 # Command that handles coins
 @client.command(aliases=["bakacoin", "coins"])
