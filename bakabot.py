@@ -1,4 +1,4 @@
-# main.py
+# bakabot.py
 import discord
 from discord.ext import commands
 from discord.ext.commands import CommandNotFound
@@ -221,7 +221,7 @@ async def blackjack(ctx, argument: str = None):
 		if ctx.message.author.id in activePlayers:
 			await ctx.send("You're already in a game, smooth brain.")
 			return
-		await addBlackjack(ctx.message.author.id, ctx.channel)
+		await addBlackjack(ctx.message.author, ctx.channel)
 
 	elif argument == 'leave':
 		if ctx.message.author.id not in activePlayers:
@@ -233,14 +233,14 @@ async def blackjack(ctx, argument: str = None):
 		return
 
 
-async def addBlackjack(id, channel):
-	activePlayers.append(id)
+async def addBlackjack(user, channel):
+	activePlayers.append(user.id)
 	for table in blackjackTables:
 		if table.channel == channel:
 			if len(table.playerList) < 4:
-				table.addPlayer(id)
+				table.addPlayer(user)
 				return
-	blackjackTables.append(blackjackInitiate.Table(channel, id))
+	blackjackTables.append(blackjackInitiate.Table(client, channel, user))
 	await blackjackTables[-1].runTable()
 	return
 
