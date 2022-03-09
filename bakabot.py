@@ -10,7 +10,7 @@ import blackjack as blackjackInitiate
 
 
 # Set to True to use the test bot, False to use the real bot
-test_env = True
+test_env = True 
 
 bot_token = ""
 if test_env:
@@ -18,7 +18,6 @@ if test_env:
 	bot_channel_id = 938410969221202021
 else:
 	bot_token = "ODkwNTIzODk5NzQ4NTgxMzk3.YUxDAg.DXg9TPad2LjJUjcHzq5-8gPgQRQ"
-	bot_channel_id = 251353278389026816
 
 
 # Connect client to database
@@ -49,7 +48,9 @@ async def on_message(msg):
 
 	channel = msg.channel
 
-	if channel.id != bot_channel_id:
+	if test_env and channel.id != bot_channel_id:
+		return
+	elif not test_env and channel.id == 938410969221202021:
 		return
 
 	message = msg.content.lower()
@@ -88,7 +89,6 @@ async def hmph(ctx):
 @client.command()
 async def he(ctx, argument: str = "n/a"):
 	argument = argument.lower()
-
 	# Embeds image and sends it
 	if argument == "bought?" or argument == "bought":
 		dumpit = discord.Embed()
@@ -204,7 +204,6 @@ async def uwu(ctx, *, message: str = None):
 	return
 
 
-activePlayers = []
 blackjackTables = []
 
 
@@ -216,44 +215,69 @@ async def blackjack(ctx, argument: str = None):
 		await ctx.send("Hey doofus, you need another command in '!baka blackjack [join/leave]'.")
 		return
 	argument = argument.lower()
-
 	if argument == 'join':
-		if ctx.message.author.id in activePlayers:
+		if await checkActivePlayer(ctx.message.author.id):
 			await ctx.send("You're already in a game, smooth brain.")
 			return
-		await addBlackjack(ctx.message.author, ctx.channel)
+		await addBlackjack(ctx, ctx.message.author, ctx.channel)
 
 	elif argument == 'leave':
-		if ctx.message.author.id not in activePlayers:
+		if not await checkActivePlayer(ctx.message.author.id):
 			await ctx.send("You're not in a game, smooth brain.")
 			return
-		await removeBlackjack(ctx.message.author.id, ctx.channel)
+		await ctx.send(await removeBlackjack(ctx.message.author, ctx.channel))
 	else:
 		await ctx.send("Dimwit, the command is '!baka blackjack [join/leave]'.")
 		return
 
 
-async def addBlackjack(user, channel):
-	activePlayers.append(user.id)
+async def addBlackjack(ctx, user, channel):
 	for table in blackjackTables:
+		if len(table.playerList) + len(table.playerQueue) - len(table.playerLeaving) == 0:
+			blackjackTables.remove(table)
+			continue
 		if table.channel == channel:
-			if len(table.playerList) < 4:
-				table.addPlayer(user)
+			if len(table.playerList) + len(table.playerQueue) - len(table.playerLeaving) < 4:
+				await ctx.send("Added to Blackjack table {}, please wait for the current turn to end to begin playing.".format(table.tableid))
+				await table.addPlayer(user)
 				return
-	blackjackTables.append(blackjackInitiate.Table(client, channel, user))
+	tableid = await generateBlackjackID()
+	await ctx.send("Added to Blackjack table {}".format(tableid))
+	blackjackTables.append(blackjackInitiate.Table(client, channel, user, tableid))
 	await blackjackTables[-1].runTable()
 	return
 
 
-async def removeBlackjack(id, channel):
-	activePlayers.remove(id)
+async def removeBlackjack(user, channel):
 	for table in blackjackTables:
 		if table.channel == channel:
 			for player in table.playerList:
-				if player == id:
-					table.removePlayer(id)
-	blackjackTables = [table for table in blackjackTables if len(table.playerList) != 0]
-	return
+				if player.id == user.id:
+					tableid = table.tableid
+					await table.removePlayer(player)
+					removemessage = "Removed from Blackjack table {}, please finish your current turn to leave.".format(tableid)
+	for table in blackjackTables:
+		if len(table.playerList) + len(table.playerQueue) - len(table.playerLeaving) == 0:
+			blackjackTables.remove(table)
+	return removemessage
+
+
+async def checkActivePlayer(userid):
+	for table in blackjackTables:
+		for player in table.playerList:
+			if player.id == userid:
+				return True
+	return False
+
+
+async def generateBlackjackID():
+	existingIDs = []
+	for table in blackjackTables:
+		existingIDs.append(table.tableid)
+	num = 1
+	while num in existingIDs:
+		num += 1
+	return num
 
 
 # Command that handles coins
