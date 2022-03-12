@@ -299,18 +299,19 @@ async def coin(ctx, *arguments):
 	argument = arguments[0].lower()
 	id = ctx.message.author.id
 
+	file = discord.File('bakacoins.png')
 	# For initiating a new account
 	if argument == "initiate":
 		if not await checkUserMoneyExists(id):
-			await ctx.send(await initiateWallet(id, 100))
+			await ctx.send(file = file, embed = await initiateWallet(ctx.message.author, 100))
 		else:
 			await ctx.send("This idiot is trying to get more free money. Hahahahahaha!")
 	elif argument == "amount" or argument == "wallet" or argument == "balance":  # For checking balance
-		await ctx.send(embed = await checkMoney(ctx.message.author))
+		await ctx.send(file = file, embed = await checkMoney(ctx.message.author))
 	elif argument == "pay":  # For giving coins to others
 		await ctx.send(await transferMoney(id, arguments))
 	elif argument == "leaderboard":
-		await ctx.send(await richestUsers())
+		await ctx.send(file = file, embed = await richestUsers())
 	else:  # If the argument is not valid
 		await ctx.send("Coin? Coin what? Use !baka coin [initiate/balance].")
 
@@ -355,11 +356,18 @@ async def checkUserMoneyExists(id):
 
 
 # Initiates user wallet
-async def initiateWallet(id, amount):
-	await client.db.execute("INSERT INTO usereconomy (id, moneyamount) VALUES ($1, $2)", id, amount)
-	print("Money of amount {} added to user id: {}".format(amount, id))
-
-	return "Your wallet has been initiated. You have received {} BakaCoins.".format(amount)
+async def initiateWallet(user, amount):
+	await client.db.execute("INSERT INTO usereconomy (id, moneyamount) VALUES ($1, $2)", user.id, amount)
+	print("Money of amount {} added to user id: {}".format(amount, user.id))
+	
+	embed = discord.Embed(
+		title = "{} BakaCoins".format(amount),
+		description = "This will be the only time you'll receive this much money for free.",
+		colour = user.colour
+		)
+	embed.set_thumbnail(url = "attachment://bakacoins.png")
+	embed.set_author(name = "{}'s Wallet".format(user.name), icon_url = user.avatar_url)
+	return embed
 
 
 # Adds money to a user's wallet
@@ -385,50 +393,36 @@ async def giveMoney(give_id, receive_id, amount):
 	return f"You have paid <@{receive_id}> {amount} BakaCoins."
 
 
-"""# Tells the user how many coins they have in their wallet
-async def checkMoney(id):
-	# If wallet has not been initiated yet
-	if not await checkUserMoneyExists(id):
-		return "You have not initiated your wallet. Go get your free coins."
-
-	# Fetches coin amount from database
-	amount = (await client.db.fetch("SELECT moneyamount FROM usereconomy WHERE id = $1", id))[0].get("moneyamount")
-	if amount == 1:
-		return "You have 1 BakaCoin remaining. Better make it count loser, hahahaha."
-
-	return "You have {} BakaCoins in your wallet.".format(amount)"""
-
-
 # Tells the user how many coins they have in their wallet
 async def checkMoney(user):
 	# If wallet has not been initiated yet
 	if not await checkUserMoneyExists(user.id):
 		embed = discord.Embed(
-			title = "{}'s Wallet".format(user.name),
-			description = "You have not initiated your wallet. Go get your free coins.",
+			title = "You have not initiated your wallet.",
+			description = "Go get your free coins!",
 			colour = user.colour
 			)
-		embed.set_thumbnail(url = user.avatar_url)
-		embed.set_author(name = "BakaCoin", icon_url = client.user.avatar_url)
+		embed.set_thumbnail(url = "attachment://bakacoins.png")
+		embed.set_author(name = "{}'s Wallet".format(user.name), icon_url = user.avatar_url)
 		return embed
 
 	# Fetches coin amount from database
 	amount = (await client.db.fetch("SELECT moneyamount FROM usereconomy WHERE id = $1", user.id))[0].get("moneyamount")
 	if amount == 1:
 		embed = discord.Embed(
-			title = "{}'s Wallet".format(user.name),
-			description = "You have not initiated your wallet. Go get your free coins.",
+			title = "1 BakaCoin",
+			description = "Better make them count loser!",
 			colour = user.colour
 			)
-		embed.set_thumbnail(url = user.avatar_url)
-		embed.set_author(name = "BakaCoin", icon_url = client.user.avatar_url)
+		embed.set_thumbnail(url = "attachment://bakacoins.png")
+		embed.set_author(name = "{}'s Wallet".format(user.name), icon_url = user.avatar_url)
 		return embed
 	embed = discord.Embed(
-		title = "{} BakaCoins",
+		title = "{} BakaCoins".format(amount),
 		description = "Better make them count loser!",
 		colour = user.colour
 		)
-	embed.set_thumbnail(url = user.avatar_url)
+	embed.set_thumbnail(url = "attachment://bakacoins.png")
 	embed.set_author(name = "{}'s Wallet".format(user.name), icon_url = user.avatar_url)
 	return embed
 
@@ -458,12 +452,24 @@ def parseUserIdFromMention(mention: str = ""):
 		return False
 
 
-async def richestUsers():
+'''async def richestUsers():
 	msg = '```'
 	richlist = await client.db.fetch("SELECT * FROM usereconomy ORDER BY moneyamount DESC")
 	for account in richlist:
 		msg += str(await client.fetch_user(account.get("id"))) + '    ' + str(account.get("moneyamount")) + '\n'
-	return msg + '```'
+	return msg + '```'''
+
+# Function to return leaderboard of richest users
+async def richestUsers():
+	embed = discord.Embed(
+		title = "BakaCoin Leaderboard",
+		description = "If your name is at the top, you should touch grass.",
+		)
+	embed.set_thumbnail(url = "attachment://bakacoins.png")
+	richlist = await client.db.fetch("SELECT * FROM usereconomy ORDER BY moneyamount DESC")
+	for i, account in enumerate(richlist):
+		embed.add_field(name = "{}: ".format(i+1) + str(await client.fetch_user(account.get("id"))), value = str(account.get("moneyamount")) + ' BakaCoins', inline = False)
+	return embed
 
 
 # Function to get the role object given the name of the role
