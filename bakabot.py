@@ -22,7 +22,7 @@ else:
 
 # Connect client to database
 async def create_db_pool():
-	client.db = await asyncpg.create_pool(dsn='postgres://bakaadmin:bakarissa@42.191.241.188:5432/bakabot')
+	client.db = await asyncpg.create_pool(dsn='postgres://bakaadmin:bakarissa@42.191.253.84:5432/bakabot')
 	print('BakaBot has connected to the BakaBot database!')
 
 # Create client with intents to be able to check members of a guild
@@ -451,13 +451,6 @@ def parseUserIdFromMention(mention: str = ""):
 	else:
 		return False
 
-
-'''async def richestUsers():
-	msg = '```'
-	richlist = await client.db.fetch("SELECT * FROM usereconomy ORDER BY moneyamount DESC")
-	for account in richlist:
-		msg += str(await client.fetch_user(account.get("id"))) + '    ' + str(account.get("moneyamount")) + '\n'
-	return msg + '```'''
 
 # Function to return leaderboard of richest users
 async def richestUsers():
