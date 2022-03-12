@@ -28,7 +28,7 @@ async def create_db_pool():
 # Create client with intents to be able to check members of a guild
 intents = discord.Intents.default()
 intents.members = True
-client = commands.Bot(command_prefix='!baka ', case_insensitive=True, intents=intents)
+client = commands.Bot(command_prefix='!baka ', case_insensitive=True, intents=intents, help_command=None)
 
 
 # When bot is ready
@@ -73,6 +73,7 @@ async def on_command_error(ctx, error):
 # Coin flip function
 @client.command()
 async def coinFlip(ctx):
+	print("Coinflip by " + ctx.author.name + " in " + ctx.guild.name)
 	if random.choice([0, 1]) == 0:
 		await ctx.send('Heads!')
 	else:
@@ -82,12 +83,14 @@ async def coinFlip(ctx):
 # Hmph command
 @client.command(aliases=["hmph!"])
 async def hmph(ctx):
+	print("Hmph by " + ctx.author.name + " in " + ctx.guild.name)
 	await ctx.send("I-it's not like I l-like you or anything, b-baka!")
 
 
 # Bogdanoff command
 @client.command()
 async def he(ctx, argument: str = "n/a"):
+	print("He bought/sold? by " + ctx.author.name + " in " + ctx.guild.name)
 	argument = argument.lower()
 	# Embeds image and sends it
 	if argument == "bought?" or argument == "bought":
@@ -105,6 +108,7 @@ async def he(ctx, argument: str = "n/a"):
 # Timer function to asynchronously parse the time given, and countdown, then returns to the message
 @client.command()
 async def timer(ctx, *, message: str = None):
+	print("Timer by " + ctx.author.name + " in " + ctx.guild.name)
 	# Checks if the arguments are empty
 	if message is None:
 		await ctx.send("Idiot! You forgot to add the time! You can do it like this: !baka timer [hr]:[min]:[sec] [message]")
@@ -142,6 +146,7 @@ async def timer(ctx, *, message: str = None):
 # Function for uploading Hope pictures
 @client.command()
 async def hope(ctx, argument: str = None):
+	print("Hope by " + ctx.author.name + " in " + ctx.guild.name)
 	# Fetches the total number of Hope pics from the database
 	count = (await client.db.fetch("SELECT count(*) FROM hopepics"))[0].get("count")
 
@@ -195,6 +200,7 @@ async def hope(ctx, argument: str = None):
 # Cursed command to uwuify a sentence
 @client.command(aliases=["owo", "uwuify", "uwufy"])
 async def uwu(ctx, *, message: str = None):
+	print("Uwu by " + ctx.author.name + " in " + ctx.guild.name)
 	# If no sentence is provided
 	if message is None:
 		await ctx.send("OwO")
@@ -210,6 +216,7 @@ blackjackTables = []
 # Blackjack
 @client.command()
 async def blackjack(ctx, argument: str = None):
+	print("Blackjack join/leave by " + ctx.author.name + " in " + ctx.guild.name)
 	# If no arguments are provided
 	if argument is None:
 		await ctx.send("Hey doofus, you need another command in '!baka blackjack [join/leave]'.")
@@ -283,9 +290,10 @@ async def generateBlackjackID():
 # Command that handles coins
 @client.command(aliases=["bakacoin", "coins"])
 async def coin(ctx, *arguments):
+	print("Coin by " + ctx.author.name + " in " + ctx.guild.name)
 	# If no arguments are provided
 	if not arguments:
-		await ctx.send("Coin? Coin what? Use !baka coin [initiate/amount/pay].")
+		await ctx.send("Coin? Coin what? Use !baka coin [initiate/amount/pay/leaderboard].")
 		return
 
 	argument = arguments[0].lower()
@@ -298,9 +306,11 @@ async def coin(ctx, *arguments):
 		else:
 			await ctx.send("This idiot is trying to get more free money. Hahahahahaha!")
 	elif argument == "amount" or argument == "wallet" or argument == "balance":  # For checking balance
-		await ctx.send(await checkMoney(id))
+		await ctx.send(embed = await checkMoney(ctx.message.author))
 	elif argument == "pay":  # For giving coins to others
 		await ctx.send(await transferMoney(id, arguments))
+	elif argument == "leaderboard":
+		await ctx.send(await richestUsers())
 	else:  # If the argument is not valid
 		await ctx.send("Coin? Coin what? Use !baka coin [initiate/balance].")
 
@@ -375,7 +385,7 @@ async def giveMoney(give_id, receive_id, amount):
 	return f"You have paid <@{receive_id}> {amount} BakaCoins."
 
 
-# Tells the user how many coins they have in their wallet
+"""# Tells the user how many coins they have in their wallet
 async def checkMoney(id):
 	# If wallet has not been initiated yet
 	if not await checkUserMoneyExists(id):
@@ -386,7 +396,41 @@ async def checkMoney(id):
 	if amount == 1:
 		return "You have 1 BakaCoin remaining. Better make it count loser, hahahaha."
 
-	return "You have {} BakaCoins in your wallet.".format(amount)
+	return "You have {} BakaCoins in your wallet.".format(amount)"""
+
+
+# Tells the user how many coins they have in their wallet
+async def checkMoney(user):
+	# If wallet has not been initiated yet
+	if not await checkUserMoneyExists(user.id):
+		embed = discord.Embed(
+			title = "{}'s Wallet".format(user.name),
+			description = "You have not initiated your wallet. Go get your free coins.",
+			colour = user.colour
+			)
+		embed.set_thumbnail(url = user.avatar_url)
+		embed.set_author(name = "BakaCoin", icon_url = client.user.avatar_url)
+		return embed
+
+	# Fetches coin amount from database
+	amount = (await client.db.fetch("SELECT moneyamount FROM usereconomy WHERE id = $1", user.id))[0].get("moneyamount")
+	if amount == 1:
+		embed = discord.Embed(
+			title = "{}'s Wallet".format(user.name),
+			description = "You have not initiated your wallet. Go get your free coins.",
+			colour = user.colour
+			)
+		embed.set_thumbnail(url = user.avatar_url)
+		embed.set_author(name = "BakaCoin", icon_url = client.user.avatar_url)
+		return embed
+	embed = discord.Embed(
+		title = "{} BakaCoins",
+		description = "Better make them count loser!",
+		colour = user.colour
+		)
+	embed.set_thumbnail(url = user.avatar_url)
+	embed.set_author(name = "{}'s Wallet".format(user.name), icon_url = user.avatar_url)
+	return embed
 
 
 # Checks if user has enough coins in wallet
@@ -412,6 +456,15 @@ def parseUserIdFromMention(mention: str = ""):
 			return False
 	else:
 		return False
+
+
+async def richestUsers():
+	msg = '```'
+	richlist = await client.db.fetch("SELECT * FROM usereconomy ORDER BY moneyamount DESC")
+	for account in richlist:
+		msg += str(await client.fetch_user(account.get("id"))) + '    ' + str(account.get("moneyamount")) + '\n'
+	return msg + '```'
+
 
 # Function to get the role object given the name of the role
 def getRole(reaction, guild):
