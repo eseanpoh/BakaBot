@@ -294,8 +294,7 @@ class Layout:
 						await self.addMoney(player.id, player.bet, player.splitdoubledowns.pop(0), client)
 						continue
 				self.instructionmessage = '{} loses in his splitted hand with a hand total of {}!'.format(player.user.name, outcome)
-				if player.splitdoubledowns.pop(0):
-					await self.removeMoney(player.id, player.bet, client)
+				player.splitdoubledowns.pop(0)
 				await self.updateTable()
 
 			if player.bust == False:
@@ -313,8 +312,6 @@ class Layout:
 					await self.addMoney(player.id, player.bet, player.doubledown, client)
 					continue
 			self.instructionmessage = '{} loses with a hand total of {}!'.format(player.user.name, player.handtotal)
-			if player.doubledown:
-				await self.removeMoney(player.id, player.bet, client)
 			await self.updateTable()
 
 

@@ -7,22 +7,23 @@ import asyncio
 import asyncpg
 import uwuify
 import blackjack as blackjackInitiate
+import variables
 
 
 # Set to True to use the test bot, False to use the real bot
-test_env = True 
+test_env = False 
 
 bot_token = ""
 if test_env:
-	bot_token = "OTM4ODA0MTgyMzA2MTU2NTc1.Yfvnhw.T9ghDZe0gZe57Mo6--G-Vadv3M8"
-	bot_channel_id = 938410969221202021
+	bot_token = variables.bot_token_test
+	bot_channel_id = variables.bot_channel_id
 else:
-	bot_token = "ODkwNTIzODk5NzQ4NTgxMzk3.YUxDAg.DXg9TPad2LjJUjcHzq5-8gPgQRQ"
+	bot_token = variables.bot_token
 
 
 # Connect client to database
 async def create_db_pool():
-	client.db = await asyncpg.create_pool(dsn='postgres://bakaadmin:bakarissa@42.191.253.84:5432/bakabot')
+	client.db = await asyncpg.create_pool(dsn=variables.dsn)
 	print('BakaBot has connected to the BakaBot database!')
 
 # Create client with intents to be able to check members of a guild
